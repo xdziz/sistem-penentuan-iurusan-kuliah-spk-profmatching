@@ -5,70 +5,71 @@ require_once '../../includes/auth.php';
 requireAdmin();
 
 $id = (int)$_GET['id'];
-$query = $conn->prepare("SELECT * FROM jurusan WHERE id = ?");
+$query = $conn->prepare("SELECT * FROM kriteria WHERE id = ?");
 $query->bind_param('i', $id);
 $query->execute();
-$jurusan = $query->get_result()->fetch_assoc();
+$kriteria = $query->get_result()->fetch_assoc();
 
-if (!$jurusan) {
+if (!$kriteria) {
     header('Location: index.php');
     exit;
-}
-
-// Ambil semua kriteria
-$kriteria_list = $conn->query("SELECT * FROM kriteria ORDER BY aspek ASC, kode ASC");
-
-// Ambil data profil ideal yang sudah ada
-$profil_existing = [];
-$pe = $conn->query("SELECT kriteria_id, nilai_ideal FROM profil_ideal WHERE jurusan_id = $id");
-while($row = $pe->fetch_assoc()) {
-    $profil_existing[$row['kriteria_id']] = $row['nilai_ideal'];
 }
 
 include '../../includes/header.php';
 ?>
 
-<div style="margin-bottom: 2rem;">
-    <a href="index.php" style="text-decoration: none; color: var(--secondary); font-size: 0.875rem; font-weight: 500;">← Kembali ke Daftar</a>
-    <h1 class="card-title" style="font-size: 1.5rem; margin-top: 1rem;">Atur Profil Ideal: <?php echo $jurusan['nama_jurusan']; ?></h1>
-    <p style="color: var(--text-muted); font-size: 0.875rem;">Tentukan nilai target untuk setiap kriteria pada jurusan ini.</p>
+<div style="max-width: 700px; margin: 0 auto;">
+    <div style="margin-bottom: 2rem;">
+        <a href="index.php" style="text-decoration: none; color: var(--secondary); font-size: 0.875rem; font-weight: 500;">← Kembali ke Daftar</a>
+        <h1 class="card-title" style="font-size: 1.5rem; margin-top: 1rem;">Edit Kriteria: <?php echo $kriteria['nama_kriteria']; ?></h1>
+    </div>
+
+    <div class="card">
+        <form action="../../proses/proses_kriteria.php?aksi=edit" method="POST">
+            <input type="hidden" name="id" value="<?php echo $kriteria['id']; ?>">
+            
+            <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 1.5rem;">
+                <div class="form-group">
+                    <label for="kode">Kode Kriteria</label>
+                    <input type="text" name="kode" id="kode" value="<?php echo $kriteria['kode']; ?>" required>
+                </div>
+                <div class="form-group">
+                    <label for="nama_kriteria">Nama Kriteria</label>
+                    <input type="text" name="nama_kriteria" id="nama_kriteria" value="<?php echo $kriteria['nama_kriteria']; ?>" required>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                <div class="form-group">
+                    <label for="aspek">Aspek Penilaian</label>
+                    <select name="aspek" id="aspek">
+                        <option value="akademik" <?php echo $kriteria['aspek'] == 'akademik' ? 'selected' : ''; ?>>Akademik</option>
+                        <option value="minat" <?php echo $kriteria['aspek'] == 'minat' ? 'selected' : ''; ?>>Minat</option>
+                        <option value="bakat" <?php echo $kriteria['aspek'] == 'bakat' ? 'selected' : ''; ?>>Bakat</option>
+                        <option value="kepribadian" <?php echo $kriteria['aspek'] == 'kepribadian' ? 'selected' : ''; ?>>Kepribadian</option>
+                        <option value="ekonomi" <?php echo $kriteria['aspek'] == 'ekonomi' ? 'selected' : ''; ?>>Ekonomi</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="tipe">Tipe Faktor</label>
+                    <select name="tipe" id="tipe">
+                        <option value="CF" <?php echo $kriteria['tipe'] == 'CF' ? 'selected' : ''; ?>>Core Factor (Utama)</option>
+                        <option value="SF" <?php echo $kriteria['tipe'] == 'SF' ? 'selected' : ''; ?>>Secondary Factor (Pendukung)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="keterangan">Keterangan</label>
+                <textarea name="keterangan" id="keterangan" rows="3"><?php echo $kriteria['keterangan']; ?></textarea>
+            </div>
+
+            <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 1rem;">
+                <a href="index.php" class="btn btn-outline">Batal</a>
+                <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
+            </div>
+        </form>
+    </div>
 </div>
-
-<form action="../../proses/proses_profil.php" method="POST">
-    <input type="hidden" name="jurusan_id" value="<?php echo $id; ?>">
-    
-    <div class="card" style="padding: 0; overflow: hidden;">
-        <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 0.875rem;">
-            <thead>
-                <tr style="background-color: var(--bg-light); border-bottom: 1px solid var(--border);">
-                    <th style="padding: 1rem 1.5rem; font-weight: 600; color: var(--secondary);">KODE</th>
-                    <th style="padding: 1rem 1.5rem; font-weight: 600; color: var(--secondary);">ASPEK</th>
-                    <th style="padding: 1rem 1.5rem; font-weight: 600; color: var(--secondary);">NAMA KRITERIA</th>
-                    <th style="padding: 1rem 1.5rem; font-weight: 600; color: var(--secondary); width: 200px;">NILAI IDEAL (1-5)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php while($k = $kriteria_list->fetch_assoc()): ?>
-                <tr style="border-bottom: 1px solid var(--border);">
-                    <td style="padding: 1rem 1.5rem;"><?php echo $k['kode']; ?></td>
-                    <td style="padding: 1rem 1.5rem; text-transform: capitalize; color: var(--text-muted);"><?php echo $k['aspek']; ?></td>
-                    <td style="padding: 1rem 1.5rem; font-weight: 600;"><?php echo $k['nama_kriteria']; ?></td>
-                    <td style="padding: 1rem 1.5rem;">
-                        <input type="number" name="nilai[<?php echo $k['id']; ?>]" 
-                               value="<?php echo $profil_existing[$k['id']] ?? '3'; ?>" 
-                               min="1" max="5" step="1" 
-                               style="width: 80px;" required>
-                    </td>
-                </tr>
-                <?php endwhile; ?>
-            </tbody>
-        </table>
-    </div>
-
-    <div style="margin-top: 2rem; display: flex; justify-content: flex-end; gap: 1rem;">
-        <a href="index.php" class="btn btn-outline">Batal</a>
-        <button type="submit" class="btn btn-primary">Simpan Profil Ideal</button>
-    </div>
-</form>
 
 <?php include '../../includes/footer.php'; ?>
